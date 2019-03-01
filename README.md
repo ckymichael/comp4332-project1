@@ -1,2 +1,3 @@
-# comp4332-project1
-### fuck
+# COMP4332 Project 1
+
+## Team Shallow Learning
