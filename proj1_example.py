@@ -47,7 +47,7 @@ def get_sequence(data, seq_length, vocab_dict):
             # YOUR CODE HERE
             if j == seq_length:
                 break
-            word_idx = vocab_dict.get(word, 1) # 1 means the unknown word
+            word_idx = vocab_dict.get(word, 1)  # 1 means the unknown word
             data_matrix[i, j] = word_idx
     return data_matrix
 
@@ -65,8 +65,8 @@ def read_data(file_name, input_length, vocab=None):
             for word in df.iloc[i]['words']:
                 vocab.add(word)
     vocab_dict = dict()
-    vocab_dict['<pad>'] = 0 # 0 means the padding signal
-    vocab_dict['<unk>'] = 1 # 1 means the unknown word
+    vocab_dict['<pad>'] = 0  # 0 means the padding signal
+    vocab_dict['<unk>'] = 1  # 1 means the unknown word
     vocab_size = 2
     for v in vocab:
         vocab_dict[v] = vocab_size
@@ -88,7 +88,7 @@ def load_data(input_length):
 
     # Load testing data
     test_id_list, _, test_data_matrix, _ = read_data("data/test.csv", input_length, vocab=vocab)
-    
+
     print("Vocabulary Size:", len(vocab))
     print("Training Set Size:", len(train_id_list))
     print("Validation Set Size:", len(valid_id_list))
