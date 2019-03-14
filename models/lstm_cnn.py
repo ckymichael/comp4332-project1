@@ -1,17 +1,17 @@
-# import numpy as np
-# import pandas as pd
+import numpy as np
+import pandas as pd
 
 import spacy
 import re
 from string import punctuation
 from nltk.corpus import stopwords
 
-# import keras
+import keras
 from keras.models import Sequential
 from keras.layers import Embedding, Dense, Dropout, LSTM, Conv1D, MaxPooling1D
 from keras.optimizers import Adam
 from keras.regularizers import l2 as L2
-# from keras.utils import to_categorical
+from keras.utils import to_categorical
 
 nlp = spacy.load('en_core_web_lg')
 nlp_vec = spacy.load('en_vectors_web_lg')
@@ -32,16 +32,24 @@ def clean_text(text):
 
 
 # TODO Import data
-def load_data():
-    data = pd.read_csv('data/test.csv', error_bad_lines = False)
-    data.columns = ['business_id', 'cool', 'date', 'funny' ,'review_id', 'stars', 'text', 'useful', 'user_id']
-    # get text and matching label columns
-    data = data.drop(['business_id', 'cool', 'date', 'funny','review_id','useful','user_id'], axis=1)
-    return data.head(5)
+def read_data():
+    df_train = pd.read_csv('../data/train.csv')
+    df_train.drop(['business_id', 'cool', 'date', 'funny', 'review_id', 'useful', 'user_id'], axis=1, inplace=True)
 
-df = load_data()
-df['text'] = df['text'].apply(clean_text)
+    df_valid = pd.read_csv('../data/valid.csv')
+    df_valid.drop(['business_id', 'cool', 'date', 'funny', 'review_id', 'useful', 'user_id'], axis=1, inplace=True)
+
+    df_test = pd.read_csv('../data/test.csv')
+    df_test.drop(['business_id', 'cool', 'date', 'funny', 'review_id', 'useful', 'user_id'], axis=1, inplace=True)
+
+    return df_train, df_valid, df_test
+
+
 # TODO Complete feature engineering
+def load_data():
+    df_train, df_valid, df_test = read_data()
+    return
+
 
 # TODO Complete the composite LSTM --> CNN model
 
