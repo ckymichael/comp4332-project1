@@ -44,7 +44,6 @@ def get_sequence(data, seq_length, vocab_dict):
     data_matrix = np.zeros((len(data), seq_length), dtype=int)
     for i, doc in enumerate(data):
         for j, word in enumerate(doc):
-            # YOUR CODE HERE
             if j == seq_length:
                 break
             word_idx = vocab_dict.get(word, 1)  # 1 means the unknown word
@@ -53,9 +52,6 @@ def get_sequence(data, seq_length, vocab_dict):
 
 
 def read_data(file_name, input_length, vocab=None):
-    """
-    https://pandas.pydata.org/pandas-docs/stable/generated/pandas.read_csv.html
-    """
     df = pd.read_csv(file_name)
     df['words'] = df['text'].apply(tokenize)
 
@@ -131,16 +127,13 @@ if __name__ == '__main__':
     model = Sequential()
 
     # embedding layer and dropout
-    # YOUR CODE HERE
     model.add(Embedding(input_dim=input_size, output_dim=embedding_size, input_length=input_length))
     model.add(Dropout(dropout_rate))
 
     # LSTM layer
-    # YOUR CODE HERE
     model.add(LSTM(units=hidden_size))
 
     # output layer
-    # YOUR CODE HERE
     model.add(Dense(K, activation='softmax'))
 
     # SGD optimizer with momentum

@@ -20,8 +20,8 @@ stop_words = set(stopwords.words('english') + list(punctuation) + ['-PRON-'])
 
 # Helper function to clean the review text
 def clean_text(text):
-    text = re.sub(r'[^a-zA-Z\s]', '', text, re.I | re.A).lower().strip()
-    text = nlp(text)
+    text = re.sub(r'[^a-zA-Z\s]', ' ', text, re.I | re.A).lower().strip()
+    text = re.sub(' +', ' ', text)
     lemmatized = list()
     for token in text:
         lemma = token.lemma_
@@ -39,7 +39,7 @@ def clean_text(text):
 
 input_size = 0
 embedding_size = 0
-input_len = 0
+input_len = 300
 hidden_size = 0
 output_size = 5  # TODO Update to dynamic value
 
@@ -62,7 +62,7 @@ regularizer_def = L2(0.001)
 model = Sequential()
 
 # Embedding Layer
-model.add(Embedding(input_dim=input_size, output_dim=embedding_size, input_length=input_len))
+model.add(Embedding(input_dim=input_size, output_dim=embedding_size, input_length=input_len, trainable=False))
 
 # LSTM Layer
 model.add(LSTM(units=hidden_size))
