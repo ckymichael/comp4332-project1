@@ -32,7 +32,15 @@ def clean_text(text):
 
 
 # TODO Import data
+def load_data():
+    data = pd.read_csv('data/test.csv', error_bad_lines = False)
+    data.columns = ['business_id', 'cool', 'date', 'funny' ,'review_id', 'stars', 'text', 'useful', 'user_id']
+    # get text and matching label columns
+    data = data.drop(['business_id', 'cool', 'date', 'funny','review_id','useful','user_id'], axis=1)
+    return data.head(5)
 
+df = load_data()
+df['text'] = df['text'].apply(clean_text)
 # TODO Complete feature engineering
 
 # TODO Complete the composite LSTM --> CNN model
