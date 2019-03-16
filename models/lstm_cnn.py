@@ -6,12 +6,16 @@ import re
 from string import punctuation
 from nltk.corpus import stopwords
 
-import keras
+from keras.utils import to_categorical
+from keras.preprocessing.sequence import pad_sequences
+
 from keras.models import Sequential
-from keras.layers import Embedding, Dense, Dropout, LSTM, Conv1D, MaxPooling1D
+from keras.layers import Dense, Dropout, LSTM
+from keras.layers import Conv1D, MaxPooling1D
 from keras.optimizers import Adam
 from keras.regularizers import l2 as L2
-from keras.utils import to_categorical
+
+import pickle
 
 nlp = spacy.load('en_core_web_lg')
 nlp_vec = spacy.load('en_vectors_web_lg')
@@ -20,8 +24,9 @@ stop_words = set(stopwords.words('english') + list(punctuation) + ['-PRON-'])
 
 # Helper function to clean the review text
 def clean_text(text):
-    text = re.sub(r'[^a-zA-Z\s]', ' ', text, re.I | re.A).lower().strip()
+    text = re.sub(r'[^a-zA-Z\s]', ' ', text, re.I | re.A).lower().replace('\n', '').strip()
     text = re.sub(' +', ' ', text)
+    text = nlp(text)
     lemmatized = list()
     for token in text:
         lemma = token.lemma_
@@ -31,7 +36,20 @@ def clean_text(text):
     return " ".join(lemmatized)
 
 
-# TODO Import data
+def get_word_vec(text):
+    seq = np.array([nlp_vec.vocab.get_vector(word) for word in text.split() if nlp_vec.vocab.has_vector(word)])
+    if seq.size > 0:
+        seq = pad_seq(seq)
+    else:
+        seq = np.zeros((150, 300))
+
+    return seq
+
+
+def pad_seq(seq):
+    return pad_sequences(seq.transpose(), dtype='float32', maxlen=150).transpose()
+
+
 def read_data():
     df_train = pd.read_csv('../data/train.csv')
     df_train.drop(['business_id', 'cool', 'date', 'funny', 'review_id', 'useful', 'user_id'], axis=1, inplace=True)
@@ -45,49 +63,63 @@ def read_data():
     return df_train, df_valid, df_test
 
 
-# TODO Complete feature engineering
 def load_data():
     df_train, df_valid, df_test = read_data()
-    return
+    df_train['text'] = df_train['text'].apply(clean_text)
+    df_valid['text'] = df_valid['text'].apply(clean_text)
+    df_test['text'] = df_test['text'].apply(clean_text)
+
+    df_valid['text'] = df_valid['text'].astype('str')
+    df_train['text'] = df_train['text'].astype('str')
+    df_test['text'] = df_test['text'].astype('str')
+
+    train_data_matrix = df_train['clean'].apply(get_word_vec).values
+    train_data_matrix = np.vstack(train_data_matrix).reshape(train_data_matrix.shape[0], 150, 300)
+    valid_data_matrix = df_valid['clean'].apply(get_word_vec).values
+    valid_data_matrix = np.vstack(valid_data_matrix).reshape(valid_data_matrix.shape[0], 150, 300)
+    test_data_matrix = df_test['clean'].apply(get_word_vec).values
+    test_data_matrix = np.vstack(test_data_matrix).reshape(test_data_matrix.shape[0], 150, 300)
+
+    K = 5
+    train_data_label = to_categorical(df_train['stars'], num_classes=K)
+    valid_data_label = to_categorical(df_valid['stars'], num_classes=K)
+
+    return train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix, K
 
 
 # TODO Complete the composite LSTM --> CNN model
+train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix, output_size = load_data()
 
-input_size = 0
-embedding_size = 0
-input_len = 300
-hidden_size = 0
-output_size = 5  # TODO Update to dynamic value
+embedding_size = 300
+time_steps = 150
 
-out_filters = 0
-kernel_size = 0
+filters = embedding_size
+kernel_size = 4
 padding = 'valid'
 strides = 1
 pool_size = 2
 
-dropout_rate = 0.2
+dropout_rate = 0.4
 learning_rate = 0.01
-batch_size = 128
+batch_size = 64
 total_epoch = 10
 
 activation_def = 'relu'
 optimizer_def = Adam()
-regularizer_def = L2(0.001)
+regularizer_def = L2(0.0001)
 
 # New model
 model = Sequential()
 
-# Embedding Layer
-model.add(Embedding(input_dim=input_size, output_dim=embedding_size, input_length=input_len, trainable=False))
-
 # LSTM Layer
-model.add(LSTM(units=hidden_size))
+model.add(LSTM(embedding_size, batch_input_shape=(batch_size, time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
+model.add(LSTM(embedding_size, batch_input_shape=(batch_size, time_steps, embedding_size), kernel_regularizer=regularizer_def))
 
 # 2 1-D Convolution Stage
-model.add(Conv1D(filters=out_filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def, activity_regularizer=L2))
-model.add(MaxPooling1D(pool_size=pool_size))
-model.add(Conv1D(filters=out_filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def, activity_regularizer=L2))
-model.add(MaxPooling1D(pool_size=pool_size))
+# model.add(Conv1D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def, activity_regularizer=L2))
+# model.add(MaxPooling1D(pool_size=pool_size))
+# model.add(Conv1D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def, activity_regularizer=L2))
+# model.add(MaxPooling1D(pool_size=pool_size))
 
 # Dropout Layer
 model.add(Dropout(rate=dropout_rate))
@@ -97,9 +129,18 @@ model.add(Dense(output_size, activation='softmax'))
 
 # Compile
 model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=learning_rate), metrics=['accuracy'])
+print(model.summary())
 
 # Training
-model.fit(epochs=total_epoch, batch_size=batch_size)
+train_history = model.fit(train_data_matrix, train_data_label, epochs=total_epoch, batch_size=batch_size, validation_data=(valid_data_matrix, valid_data_label))
 
-# TODO Complete model evaluation
+model.save('lstm_'+str(total_epoch)+'epoch.h5')
+with open('/trainHistoryDict', 'wb') as file_pi:
+    pickle.dump(train_history.history, file_pi)
+
 # Testing
+train_score = model.evaluate(train_data_matrix, train_data_label, batch_size=batch_size)
+print('Training Loss: {}\n Training Accuracy: {}\n'.format(train_score[0], train_score[1]))
+
+valid_score = model.evaluate(valid_data_matrix, valid_data_label, batch_size=batch_size)
+print('Validation Loss: {}\n Validation Accuracy: {}\n'.format(valid_score[0], valid_score[1]))
