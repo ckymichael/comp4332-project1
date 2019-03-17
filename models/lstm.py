@@ -14,7 +14,7 @@ from keras.layers import Dense, Dropout, LSTM
 from keras.optimizers import Adam
 from keras.regularizers import l2 as L2
 
-import pickle
+import json
 
 nlp = spacy.load('en_core_web_lg')
 nlp_vec = spacy.load('en_vectors_web_lg')
@@ -83,19 +83,18 @@ def load_data():
     train_data_label = to_categorical(df_train['stars'], num_classes=K)
     valid_data_label = to_categorical(df_valid['stars'], num_classes=K)
 
-    return train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix
+    return train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix, K
 
 
-train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix = load_data()
+train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_data_matrix, output_size = load_data()
 
 embedding_size = 300
 time_steps = 150
-output_size = 5
 
-dropout_rate = 0.4
+dropout_rate = 0.5
 learning_rate = 0.01
 batch_size = 64
-total_epoch = 10
+total_epoch = 20
 
 activation_def = 'relu'
 optimizer_def = Adam()
@@ -104,23 +103,28 @@ regularizer_def = L2(0.0001)
 # New model
 model = Sequential()
 
-# Single LSTM
-model.add(LSTM(batch_size, input_shape=(time_steps, embedding_size), kernel_regularizer=regularizer_def))
-
 # Double LSTM
-# model.add(LSTM(batch_size, input_shape=(time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
-# model.add(LSTM(batch_size, input_shape=(time_steps, embedding_size), kernel_regularizer=regularizer_def))
+model.add(LSTM(embedding_size, input_shape=(time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
+model.add(LSTM(embedding_size, input_shape=(time_steps, embedding_size), kernel_regularizer=regularizer_def))
 
+# Dropout Layer
 model.add(Dropout(rate=dropout_rate))
+
+# Output
 model.add(Dense(output_size, activation='softmax'))
 
+# Compile
 model.compile(loss='categorical_crossentropy', optimizer=Adam(lr=learning_rate), metrics=['accuracy'])
+print(model.summary())
+
+# Training
 train_history = model.fit(train_data_matrix, train_data_label, epochs=total_epoch, batch_size=batch_size, validation_data=(valid_data_matrix, valid_data_label))
 
 model.save('lstm_'+str(total_epoch)+'epoch.h5')
-with open('./lstm_history', 'wb') as file_pi:
-    pickle.dump(train_history.history, file_pi)
+with open('./lstm_history.json', 'w') as fp:
+    json.dump(train_history.history, fp)
 
+# Evaluation
 train_score = model.evaluate(train_data_matrix, train_data_label, batch_size=batch_size)
 print('Training Loss: {}\n Training Accuracy: {}\n'.format(train_score[0], train_score[1]))
 
