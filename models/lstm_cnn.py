@@ -135,8 +135,8 @@ print(model.summary())
 # Training
 train_history = model.fit(train_data_matrix, train_data_label, epochs=total_epoch, batch_size=batch_size, validation_data=(valid_data_matrix, valid_data_label))
 
-model.save('lstm_cnn'+str(total_epoch)+'epoch.h5')
-with open('./lstm_cnn_history.json', 'w') as fp:
+model.save('../build/lstm_cnn'+str(total_epoch)+'epoch.h5')
+with open('../build/lstm_cnn_history.json', 'w') as fp:
     json.dump(train_history.history, fp)
 
 # Evaluation
