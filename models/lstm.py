@@ -10,8 +10,7 @@ from keras.utils import to_categorical
 from keras.preprocessing.sequence import pad_sequences
 
 from keras.models import Sequential
-from keras.layers import Dense, Dropout, Flatten
-from keras.layers import LSTM, Conv1D, MaxPooling1D
+from keras.layers import Dense, Dropout, LSTM
 from keras.optimizers import Adam
 from keras.regularizers import l2 as L2
 
@@ -22,7 +21,6 @@ nlp_vec = spacy.load('en_vectors_web_lg')
 stop_words = set(stopwords.words('english') + list(punctuation) + ['-PRON-'])
 
 
-# Helper function to clean the review text
 def clean_text(text):
     text = re.sub(r'[^a-zA-Z\s]', ' ', text, re.I | re.A).lower().replace('\n', '').strip()
     text = re.sub(' +', ' ', text)
@@ -65,6 +63,7 @@ def read_data():
 
 def load_data():
     df_train, df_valid, df_test = read_data()
+
     df_train['text'] = df_train['text'].apply(clean_text)
     df_valid['text'] = df_valid['text'].apply(clean_text)
     df_test['text'] = df_test['text'].apply(clean_text)
@@ -92,12 +91,6 @@ train_data_matrix, train_data_label, valid_data_matrix, valid_data_label, test_d
 embedding_size = 300
 time_steps = 150
 
-filters = 60
-kernel_size = 4
-padding = 'valid'
-strides = 1
-pool_size = 2
-
 dropout_rate = 0.5
 learning_rate = 0.01
 batch_size = 64
@@ -110,17 +103,9 @@ regularizer_def = L2(0.0001)
 # New model
 model = Sequential()
 
-# LSTM Layer
-model.add(LSTM(embedding_size, input_shape=(batch_size, time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
-# model.add(LSTM(embedding_size, input_shape=(batch_size, time_steps, embedding_size), kernel_regularizer=regularizer_def))
-
-# 2 1-D Convolution Stage
-model.add(Conv1D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def))
-model.add(MaxPooling1D(pool_size=pool_size))
-model.add(Conv1D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def))
-model.add(MaxPooling1D(pool_size=pool_size))
-
-model.add(Flatten())
+# Double LSTM
+model.add(LSTM(embedding_size, input_shape=(time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
+model.add(LSTM(embedding_size, input_shape=(time_steps, embedding_size), kernel_regularizer=regularizer_def))
 
 # Dropout Layer
 model.add(Dropout(rate=dropout_rate))
@@ -135,8 +120,8 @@ print(model.summary())
 # Training
 train_history = model.fit(train_data_matrix, train_data_label, epochs=total_epoch, batch_size=batch_size, validation_data=(valid_data_matrix, valid_data_label))
 
-model.save('../build/lstm_cnn'+str(total_epoch)+'epoch.h5')
-with open('../build/lstm_cnn_history.json', 'w') as fp:
+model.save('../build/lstm_'+str(total_epoch)+'epoch.h5')
+with open('../build/lstm_history.json', 'w') as fp:
     json.dump(train_history.history, fp)
 
 # Evaluation
