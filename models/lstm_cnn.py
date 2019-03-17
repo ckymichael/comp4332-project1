@@ -111,8 +111,8 @@ regularizer_def = L2(0.0001)
 model = Sequential()
 
 # LSTM Layer
-model.add(LSTM(embedding_size, batch_input_shape=(batch_size, time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
-# model.add(LSTM(embedding_size, batch_input_shape=(batch_size, time_steps, embedding_size), kernel_regularizer=regularizer_def))
+model.add(LSTM(embedding_size, input_shape=(batch_size, time_steps, embedding_size), return_sequences=True, kernel_regularizer=regularizer_def))
+# model.add(LSTM(embedding_size, input_shape=(batch_size, time_steps, embedding_size), kernel_regularizer=regularizer_def))
 
 # 2 1-D Convolution Stage
 model.add(Conv1D(filters=filters, kernel_size=kernel_size, strides=strides, padding=padding, activation=activation_def))
